@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#101827">
+  <meta name="description" content="Dein tägliches 20-Euro-Budget und dein wachsendes Sparkonto.">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <title>Daily20</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0b1220;--panel:#141f31;--panel2:#1b2940;--text:#f4f7fb;--muted:#9baac0;--green:#48d597;--line:#293850;--red:#ff8585}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:radial-gradient(ellipse at top,#172842 0%,var(--bg) 55%);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;display:flex;justify-content:center;padding:26px 16px calc(26px + env(safe-area-inset-bottom))}
+    main{width:min(100%,440px)}
+    header{display:flex;justify-content:space-between;align-items:center;margin:8px 2px 26px}
+    .brand{font-weight:850;font-size:26px;letter-spacing:-1px}.brand span{color:var(--green)}
+    .date{color:var(--muted);font-size:13px}
+    .card{background:linear-gradient(145deg,rgba(27,41,64,.98),rgba(17,29,47,.98));border:1px solid var(--line);border-radius:24px;padding:22px;margin-bottom:14px;box-shadow:0 16px 45px #0002}
+    .eyebrow{color:var(--muted);font-size:13px;font-weight:650;letter-spacing:.04em;text-transform:uppercase}
+    .amount{font-size:clamp(46px,13vw,62px);font-weight:850;letter-spacing:-3px;line-height:1.15;margin:10px 0 6px}
+    .amount small{font-size:23px;letter-spacing:-.5px;color:var(--muted);font-weight:650}
+    .track{height:10px;background:#293850;border-radius:20px;overflow:hidden;margin:19px 0 9px}
+    .fill{height:100%;background:linear-gradient(90deg,#37bd85,#69e4ae);border-radius:20px;transition:width .25s}
+    .split{display:flex;justify-content:space-between;gap:12px;color:var(--muted);font-size:13px}
+    .savings{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .savings .amount{font-size:36px;letter-spacing:-1.5px;color:var(--green);margin:8px 0 0}
+    .coin{width:48px;height:48px;border-radius:16px;background:#214b40;display:grid;place-items:center;font-size:24px}
+    label{display:block;color:var(--muted);font-size:13px;font-weight:650;margin-bottom:9px}
+    .entry{display:flex;gap:10px}
+    input{min-width:0;flex:1;background:#0c1728;border:1px solid #34445d;border-radius:14px;padding:15px 14px;color:var(--text);font-size:18px;outline:none}
+    input:focus{border-color:var(--green);box-shadow:0 0 0 3px #48d59720}
+    button{border:0;border-radius:14px;padding:0 19px;background:var(--green);color:#082117;font-size:15px;font-weight:800;cursor:pointer}
+    button:disabled{opacity:.4;cursor:not-allowed}
+    .hint{font-size:12px;color:var(--muted);margin:10px 2px 0;line-height:1.5}
+    .history-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .history-head strong{font-size:16px}
+    .history{display:flex;flex-direction:column;gap:0}
+    .item{display:flex;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);font-size:14px}
+    .item span:last-child{font-variant-numeric:tabular-nums;font-weight:700}
+    .empty{color:var(--muted);font-size:13px;padding:8px 0}
+    footer{text-align:center;color:#71829b;font-size:11px;padding:10px 12px 0;line-height:1.5}
+    .toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:#e9fff4;color:#09271a;padding:12px 18px;border-radius:14px;font-weight:700;font-size:13px;opacity:0;pointer-events:none;transition:.2s;box-shadow:0 8px 28px #0005}
+    .toast.show{opacity:1;transform:translate(-50%,0)}
+    @media(min-width:600px){body{padding-top:44px}}
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="brand">Daily<span>20</span></div>
+    <div class="date" id="date"></div>
+  </header>
+
+  <section class="card">
+    <div class="eyebrow">Heute noch verfügbar</div>
+    <div class="amount"><span id="available">20,00</span><small> €</small></div>
+    <div class="track"><div class="fill" id="bar" style="width:100%"></div></div>
+    <div class="split"><span>Ausgegeben: <b id="spent">0,00 €</b></span><span>Tagesbudget: 20,00 €</span></div>
+  </section>
+
+  <section class="card savings">
+    <div>
+      <div class="eyebrow">Dein Sparkonto</div>
+      <div class="amount"><span id="savings">0,00</span><small> €</small></div>
+    </div>
+    <div class="coin" aria-hidden="true">🐷</div>
+  </section>
+
+  <section class="card">
+    <label for="expense">Wie viel hast du ausgegeben?</label>
+    <div class="entry">
+      <input id="expense" type="number" inputmode="decimal" min="0.01" step="0.01" placeholder="z. B. 4,50" aria-label="Ausgegebener Betrag in Euro">
+      <button id="add">Abziehen</button>
+    </div>
+    <p class="hint">Um Mitternacht wird dein übriges Tagesbudget automatisch aufs Sparkonto übertragen. Du musst nichts bestätigen.</p>
+  </section>
+
+  <section class="card">
+    <div class="history-head"><strong>Heutige Ausgaben</strong><span class="date" id="count">0 Buchungen</span></div>
+    <div class="history" id="history"><div class="empty">Noch keine Ausgaben heute.</div></div>
+  </section>
+
+  <footer>Daily20 · Deine Finanzen bleiben auf diesem Gerät gespeichert.<br>Der Tageswechsel wird beim Öffnen bzw. Weiternutzen der App verarbeitet.</footer>
+</main>
+<div class="toast" id="toast" role="status"></div>
+<script>
+(() => {
+  const DAILY = 20;
+  const KEY = "daily20-v1";
+  const $ = id => document.getElementById(id);
+  const localDate = (d = new Date()) => {
+    const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0"), day=String(d.getDate()).padStart(2,"0");
+    return `${y}-${m}-${day}`;
+  };
+  const dateFromKey = key => {
+    const [y,m,d]=key.split("-").map(Number);
+    return new Date(y,m-1,d,12,0,0,0);
+  };
+  const shiftDate = (key, days) => {
+    const d=dateFromKey(key); d.setDate(d.getDate()+days); return localDate(d);
+  };
+  const fresh = () => ({savings:0,lastProcessed:localDate(),spentByDay:{},expensesByDay:{}});
+  let state;
+  try { state=JSON.parse(localStorage.getItem(KEY)) || fresh(); } catch { state=fresh(); }
+  if (!Number.isFinite(state.savings) || !state.lastProcessed) state=fresh();
+  state.spentByDay ||= {};
+  state.expensesByDay ||= {};
+
+  function save(){ localStorage.setItem(KEY,JSON.stringify(state)); }
+  function rollForward(){
+    const today=localDate();
+    let cursor=state.lastProcessed;
+    // Each missed date is settled once. Unused budget is saved automatically.
+    while(cursor < today){
+      const used=Number(state.spentByDay[cursor]||0);
+      state.savings += Math.max(0, DAILY-used);
+      cursor=shiftDate(cursor,1);
+      state.lastProcessed=cursor;
+    }
+    save();
+  }
+  function euro(n){return Number(n).toLocaleString("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2});}
+  function notify(msg){
+    const el=$("toast");el.textContent=msg;el.classList.add("show");
+    setTimeout(()=>el.classList.remove("show"),2200);
+  }
+  function render(){
+    rollForward();
+    const today=localDate();
+    const spent=Number(state.spentByDay[today]||0);
+    const available=Math.max(0,DAILY-spent);
+    $("date").textContent=new Intl.DateTimeFormat("de-DE",{weekday:"short",day:"2-digit",month:"long"}).format(new Date());
+    $("available").textContent=euro(available);
+    $("spent").textContent=euro(spent)+" €";
+    $("savings").textContent=euro(state.savings);
+    $("bar").style.width=(available/DAILY*100)+"%";
+    const expenses=state.expensesByDay[today]||[];
+    $("count").textContent=expenses.length+(expenses.length===1?" Buchung":" Buchungen");
+    $("history").innerHTML=expenses.length
+      ? expenses.slice().reverse().map(x=>`<div class="item"><span>Ausgabe</span><span>− ${euro(x.amount)} €</span></div>`).join("")
+      : '<div class="empty">Noch keine Ausgaben heute.</div>';
+    $("add").disabled=available<=0;
+  }
+  $("add").addEventListener("click",()=>{
+    rollForward();
+    const amount=Number(String($("expense").value).replace(",","."));
+    const today=localDate();
+    const spent=Number(state.spentByDay[today]||0);
+    const available=DAILY-spent;
+    if(!Number.isFinite(amount)||amount<=0){notify("Bitte einen gültigen Betrag eingeben.");return;}
+    if(amount>available+0.000001){notify("Das ist mehr als dein restliches Tagesbudget.");return;}
+    state.spentByDay[today]=Math.round((spent+amount)*100)/100;
+    state.expensesByDay[today] ||= [];
+    state.expensesByDay[today].push({amount:Math.round(amount*100)/100});
+    $("expense").value="";
+    save();render();notify("Ausgabe wurde abgezogen.");
+  });
+  $("expense").addEventListener("keydown",e=>{if(e.key==="Enter")$("add").click();});
+  render();
+  // While the app is open, schedule a local midnight refresh. If the browser
+  // suspends the page, the next visibility change/open catches up via rollForward.
+  function scheduleMidnight(){
+    const now=new Date(), next=new Date(now);
+    next.setHours(24,0,0,20);
+    setTimeout(()=>{render();scheduleMidnight();},Math.max(1000,next-now));
+  }
+  scheduleMidnight();
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)render();});
+  window.addEventListener("focus",render);
+  if("serviceWorker" in navigator && location.protocol.startsWith("http")){
+    window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
+  }
+})();
+</script>
+</body>
+</html>
